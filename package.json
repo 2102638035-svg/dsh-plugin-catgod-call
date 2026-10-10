@@ -13,5 +13,8 @@
     "bundle": { "patch": "./cordis.patch.yml" }
   },
   "files": ["lib", "cordis.patch.yml"],
+  "scripts": {
+    "check": "node ../../工具/提交前检查.mjs"
+  },
   "license": "MIT"
 }
