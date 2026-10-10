@@ -1,0 +1,17 @@
+{
+  "name": "dsh-plugin-catgod-call",
+  "version": "1.0.0",
+  "private": true,
+  "description": "小猫之神 · 喊话插件：AI 想叫用户时，通过 catgod_call 工具把文字合成语音并用系统扬声器大声播放",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": { "default": "./lib/index.js" },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" }
+  },
+  "files": ["lib", "cordis.patch.yml"],
+  "license": "MIT"
+}

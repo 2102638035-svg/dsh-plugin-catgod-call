@@ -1,0 +1,31 @@
+# 依赖
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+
+# 密钥与本地配置（绝对不要提交）
+.env
+.env.*
+*.key
+*.token
+secrets.json
+config.local.yml
+cordis.patch.local.yml
+
+# 音频临时产物
+*.mp3
+*.wav
+*.opus
+*.pcm
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 日志
+*.log
+npm-debug.log*

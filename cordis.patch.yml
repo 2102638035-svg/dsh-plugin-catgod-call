@@ -1,0 +1,46 @@
+- insert:
+    - id: catgod-call
+      name: dsh-plugin-catgod-call
+      config:
+        # —— 引擎 ——
+        # offline = Windows SAPI（离线、零成本）
+        # online  = 硅基流动 CosyVoice2（音质好、耗额度）
+        engine: online
+        # 在线失败时是否自动回退到离线 SAPI
+        fallbackToOffline: true
+
+        # —— 硅基流动 ——
+        apiUrl: "https://api.siliconflow.cn/v1/audio/speech"
+        # 从环境变量 SILICONFLOW_API_KEY 读；也可直接填字面量
+        apiKey: ""
+        model: "FunAudioLLM/CosyVoice2-0.5B"
+        # 音色。格式：
+        #   官方音色：FunAudioLLM/CosyVoice2-0.5B:alex
+        #   克隆音色：speech:<你起的名字>:<你的音色ID>:<哈希>
+        #            （用 POST /v1/audio/voice/list 查自己的）
+        voice: "FunAudioLLM/CosyVoice2-0.5B:alex"
+        # 代理。留空则直连。
+        proxy: ""
+        speed: 1.1
+        timeoutMs: 60000
+
+        # —— 离线 SAPI ——
+        sapiVoice: "Microsoft Huihui Desktop"
+        sapiRate: 2
+        sapiVolume: 100
+
+        # —— 播放 ——
+        # 叫醒模式：先播"叮咚"提示音，再把音量拉到 100 后播放
+        wakeDingdong: true
+        # 播放前把系统音量拉到最大（播放后恢复原值）
+        forceMaxVolume: true
+        # 喊完一次后，隔多久自动再喊（毫秒）。0 = 关闭循环
+        repeatIntervalMs: 0
+        # 最多重复喊几次（含第一次）
+        repeatMax: 3
+
+        # —— 文案 ——
+        # 默认称呼
+        addressAs: "主人"
+        # 工具给 AI 的说明
+        toolDescription: "小猫之神喊话：把一句话合成语音，用电脑扬声器大声播放出来，用于叫用户回来看消息/提醒用户。"
