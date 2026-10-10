@@ -143,80 +143,39 @@ speech:<自定义名>:<音色ID>:<哈希>
 
 ---
 
-## 音量安全：三重保险
+## 音量安全：四重保险
 
-**播放前拉满音量，播放后必定恢复原值。** 三层保障：
+**播放前拉满音量，播放后必定恢复原值。** 四层保障：
 
 | 保险 | 机制 | 应对场景 |
 |---|---|---|
 | 一 | PowerShell `try/finally` | 播放中途崩溃 |
 | 二 | Node 侧超时兜底 | PowerShell 进程被强杀 |
-| 三 | 崩溃看门狗 | 整个宿主被杀 |
+| 三 | 恢复后校验 + 补恢复 | PowerShell 说恢复了但值不对 |
+| 四 | 看门狗（启动时 + 每次调用前） | 整个宿主被杀 |
 
-原理：拉高前把原音量写进状态文件，正常恢复后删除。
-下次启动若发现文件还在，说明上次没还成，立刻补还。
+### 状态文件机制
 
-> `Restore-Volume` 函数**内部整体 try/catch 且绝不外抛**。
-> 因为它在 `finally` 里调用，一旦抛出会覆盖真实错误、连结果输出都跳过。
+拉高音量**之前**把原音量写入状态文件：
 
----
-
-## 开发笔记（踩过的坑）
-
-### 1. 不要 import `@deepseek-ai/dsh-tools`
-
-插件若放在 `DSH_HOME` 之外，Node 层解析够不着官方包。
-
-好在 `defineTool` 只做纯数据加工：
-- `parameters` DSL → JSON Schema
-- 用 JSON Schema 校验参数
-- 包一层 `execute`
-
-这些都能手写（见 `lib/index.js` 的 `specToJsonSchema` / `validateJsonSchemaValue`）。
-注册仍走官方 `ctx.tools.register()`，所以工具行为与内置工具一致。
-
-### 2. 音量与播放必须合并在同一个 PowerShell 进程
-
-`Add-Type` 编译 C# COM 定义要 1~3 秒。
-若"设音量"和"播放"分两个进程，每个都要编译一次，用户会明显感到
-**"声音先出来、音量后提高"**。合并后延迟从 6 秒降到 1 秒内。
-
-### 3. Windows PowerShell 5.1 不支持 `||` 和 `&&`
-
-这是**解析期错误**，整个脚本一行都不执行。而且 `-EncodedCommand` 下
-错误只进 stderr、stdout 为空，会伪装成"执行了但没效果"。
-
-```powershell
-# ❌ PS 5.1 直接报错：The token '||' is not a valid statement separator
-Add-Type -AssemblyName presentationCore || Add-Type -AssemblyName PresentationCore
-
-# ✅ 用 try/catch
-try { Add-Type -AssemblyName presentationCore -ErrorAction Stop }
-catch { try { Add-Type -AssemblyName PresentationCore -ErrorAction Stop } catch {} }
+```
+%TEMP%\catgod-call-volume-state.json
 ```
 
-### 4. `$script:` 前缀不能省
+- 恢复**并校验成功**后才删除
+- 恢复失败时**保留**，留给下次补救
+- 看门狗在**插件启动时**和**每次喊话前**都会检查它，发现残留立刻补还
 
-PowerShell 函数默认创建**局部作用域**。`Restore-Volume` 里若写
-`$savedVolume` 而非 `$script:savedVolume`，读到的是 `$null`，**音量就还不回去**。
+> 早期版本有个 bug：无论恢复成功与否都删除状态文件，
+> 导致恢复失败后看门狗再也救不回来，音量永久卡在 100%。
+> 现在只在**确认恢复成功**时才清除。
 
-### 5. 用 `-EncodedCommand` 传脚本
+### 一个实现细节
 
-避免中文与引号转义地狱。脚本前加 `$ProgressPreference='SilentlyContinue'`
-抑制模块加载提示；输出用 `[Console]::Out.Write` 而非 `Write-Output`
-（否则被 CLIXML 包裹）。
+`Restore-Volume` 函数**内部整体 try/catch 且绝不外抛**。
+因为它在 `finally` 里调用，一旦抛出会覆盖真实错误、连结果输出都跳过，
+Node 侧将完全收不到诊断信息。
 
-### 6. `Parser::ParseFile` 对无 BOM + 裸 LF + 中文会算错行列
-
-若你把生成的 PowerShell 落盘做静态语法检查，**必须写 CRLF + UTF-8 BOM**，
-否则会报出与真实位置完全不符的语法错误（假阳性）。
-
-### 7. `IAudioEndpointVolume` 连续高频调用会失效
-
-抛 `0xEE74E300`（`AUDCLNT_E_DEVICE_INVALIDATED`，设备被抢占）。
-恢复音量的函数要**带重试**，且绝不外抛。
-
----
 
 ## 许可
 
